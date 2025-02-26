@@ -6,6 +6,7 @@ services:
     container_name: my-nginx
     ports:
       - "82:80"
+      - "443:443"
     volumes:
       - /docker/ :/usr/share/nginx/html
     restart: always
