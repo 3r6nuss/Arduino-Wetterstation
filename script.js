@@ -1,10 +1,13 @@
+// Global chart variable
+let weatherChart;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Chart initialisieren
     const ctx = document.getElementById('weatherChart').getContext('2d');
-    const weatherChart = new Chart(ctx, {
+    weatherChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [], // Zeitstempel
+            labels: [], 
             datasets: [{
                 label: 'Temperatur (°C)',
                 data: [],
@@ -25,16 +28,15 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
+            animation: {
+                duration: 750
+            },
             scales: {
                 x: {
-                    type: 'time',
-                    time: {
-                        unit: 'minute',
-                        tooltipFormat: 'HH:mm:ss'
-                    },
+                    type: 'category',
                     title: {
                         display: true,
-                        text: 'Zeit'
+                        text: 'Messung'
                     }
                 },
                 'y-temp': {
@@ -43,7 +45,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: {
                         display: true,
                         text: 'Temperatur (°C)'
-                    }
+                    },
+                    min: 0,
+                    max: 40
                 },
                 'y-hum': {
                     type: 'linear',
@@ -52,6 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         display: true,
                         text: 'Luftfeuchtigkeit (%)'
                     },
+                    min: 0,
+                    max: 100,
                     grid: {
                         drawOnChartArea: false,
                     }
@@ -60,32 +66,66 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Funktion zur Simulation des Abrufs von Sensordaten
-    function updateMeasurements() {
-        const now = new Date();
-        // Simulierte Messwerte (ersetze dies durch den Abruf von echten Daten vom ESP)
-        const temp = (20 + Math.random() * 10).toFixed(1);
-        const hum = (40 + Math.random() * 20).toFixed(1);
-
-        // Update der HTML-Elemente
-        document.getElementById('temperature').textContent = temp;
-        document.getElementById('humidity').textContent = hum;
-
-        // Neue Daten zum Diagramm hinzufügen
-        weatherChart.data.labels.push(now);
-        weatherChart.data.datasets[0].data.push(temp);
-        weatherChart.data.datasets[1].data.push(hum);
-
-        // Beschränke die Anzeige auf die letzten 20 Messwerte
-        if (weatherChart.data.labels.length > 20) {
-            weatherChart.data.labels.shift();
-            weatherChart.data.datasets[0].data.shift();
-            weatherChart.data.datasets[1].data.shift();
-        }
-        weatherChart.update();
+    // Initialize chart with existing data if available
+    if (typeof weatherData !== 'undefined' && weatherData.length > 0) {
+        console.log('Initial weather data:', weatherData);
+        weatherData.forEach((data, index) => {
+            weatherChart.data.labels.push(`Messung ${index + 1}`);
+            weatherChart.data.datasets[0].data.push(parseFloat(data.Temperatur_Aktuell));
+            weatherChart.data.datasets[1].data.push(parseFloat(data.Feuchtigkeit_Aktuell));
+        });
+        weatherChart.update('none'); // Update without animation for initial data
     }
-
-    // Aktualisiere Messwerte alle 5 Sekunden
-    setInterval(updateMeasurements, 5000);
-    updateMeasurements(); // Initialer Aufruf
 });
+
+function addData() {
+    // Disable button während der Aktualisierung
+    const button = document.getElementById('add-data');
+    button.disabled = true;
+
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Warte 500ms bevor die Daten aktualisiert werden
+            setTimeout(() => {
+                console.log('Received data:', data);
+                
+                // Update der HTML-Elemente
+                document.getElementById('temperature').textContent = data.temperature;
+                document.getElementById('humidity').textContent = data.humidity;
+
+                // Add new measurement label
+                const newIndex = weatherChart.data.labels.length + 1;
+                weatherChart.data.labels.push(`Messung ${newIndex}`);
+                
+                // Add new data points
+                weatherChart.data.datasets[0].data.push(parseFloat(data.temperature));
+                weatherChart.data.datasets[1].data.push(parseFloat(data.humidity));
+
+                // Keep only last 10 measurements
+                if (weatherChart.data.labels.length > 10) {
+                    weatherChart.data.labels.shift();
+                    weatherChart.data.datasets[0].data.shift();
+                    weatherChart.data.datasets[1].data.shift();
+                }
+
+                weatherChart.update();
+                // Button wieder aktivieren
+                button.disabled = false;
+            }, 500);
+        } else {
+            console.error('Error:', data.error);
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+    });
+}
