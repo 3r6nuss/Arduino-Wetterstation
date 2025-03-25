@@ -8,6 +8,20 @@ const char* password = "60025416322051135176"; // Hier dein WLAN-Passwort eintra
 // Sensor-Pin
 const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 
+// Eigene Hash-Funktion zur Generierung eines 6-stelligen Codes aus der MAC-Adresse
+uint32_t customHash(String macAddress) {
+    uint32_t hash = 0;
+    for (size_t i = 0; i < macAddress.length(); i++) {
+        hash = (hash * 31) + macAddress[i]; // Einfache Hash-Berechnung
+    }
+    return hash % 1000000; // Auf 6-stellige Zahl begrenzen
+}
+
+String generateDeviceCode(String macAddress) {
+    uint32_t code = customHash(macAddress); // Verwende die eigene Hash-Funktion
+    return String(code);
+}
+
 void setup() {
     Serial.begin(115200);
     
@@ -24,6 +38,18 @@ void setup() {
     Serial.println("\nVerbunden mit WLAN!");
     Serial.print("IP-Adresse: ");
     Serial.println(WiFi.localIP());
+
+    // MAC-Adresse abrufen
+    String macAddress = WiFi.macAddress();
+
+    // Einmaligen Code generieren
+    String deviceCode = generateDeviceCode(macAddress);
+
+    // Code ausgeben
+    Serial.print("MAC-Adresse: ");
+    Serial.println(macAddress);
+    Serial.print("Geraete-Code: ");
+    Serial.println(deviceCode);
 }
 
 void loop() {
@@ -45,21 +71,12 @@ void loop() {
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
         
-        // POST-Anfrage nur mit Lichtwert vorbereiten
-        String postData = "light_level=" + String(lightLevel);
+        // POST-Anfrage mit Lichtwert und Geräte-Code vorbereiten
+        String macAddress = WiFi.macAddress();
+        String deviceCode = generateDeviceCode(macAddress);
+        String postData = "light_level=" + String(lightLevel) + "&device_code=" + deviceCode;
         
-        // Anfrage senden
-        Serial.println("Sende Daten an Server...");
-        int httpResponseCode = http.POST(postData);
-        
-        if (httpResponseCode > 0) {
-            String response = http.getString();
-            Serial.println("HTTP Response Code: " + String(httpResponseCode));
-            Serial.println("Antwort vom Server: " + response);
-        } else {
-            Serial.print("Fehler bei HTTP-Anfrage: ");
-            Serial.println(httpResponseCode);
-        }
+       
         
         http.end(); // Verbindung schließen
     } else {

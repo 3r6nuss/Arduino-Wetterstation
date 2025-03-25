@@ -8,6 +8,9 @@ const char* password = "Your_PASSWORD"; // Hier dein WLAN-Passwort eintragen
 // Sensor-Pin
 const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 
+// Ersetzen der festen ESP-ID durch die MAC-Adresse
+String espId = WiFi.macAddress(); // MAC-Adresse als eindeutige ID verwenden
+
 void setup() {
     Serial.begin(115200);
     
@@ -24,6 +27,10 @@ void setup() {
     Serial.println("\nVerbunden mit WLAN!");
     Serial.print("IP-Adresse: ");
     Serial.println(WiFi.localIP());
+    
+    // MAC-Adresse ausgeben
+    Serial.print("ESP-ID (MAC-Adresse): ");
+    Serial.println(espId);
 }
 
 void loop() {
@@ -45,8 +52,8 @@ void loop() {
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
         
-        // POST-Anfrage nur mit Lichtwert vorbereiten
-        String postData = "light_level=" + String(lightLevel);
+        // POST-Anfrage mit Lichtwert und MAC-Adresse vorbereiten
+        String postData = "light_level=" + String(lightLevel) + "&esp_id=" + espId;
         
         // Anfrage senden
         Serial.println("Sende Daten an Server...");

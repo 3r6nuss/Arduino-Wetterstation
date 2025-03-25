@@ -5,7 +5,7 @@ include 'config.php';
 // Prüfen, ob die Anfrage eine POST-Anfrage ist
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Arrays für Parameter und deren Werte
-    $params = array('light_level', 'temperature', 'humidity', 'pressure', 'wind_speed', 'rain');
+    $params = array('light_level', 'temperature', 'humidity', 'pressure', 'wind_speed', 'rain', 'esp_id', 'device_code'); // 'device_code' hinzugefügt
     $values = array();
     $valid_data = false;
     
@@ -29,8 +29,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($stmt) {
             // Typen für Parameter festlegen
-            $types = str_repeat("d", count($values)); // Alle als Zahlen behandeln
-            
+            $types = str_repeat("d", count($values) - 2) . "ss"; // Zahlen und Strings für esp_id und device_code
+
             // Parameter an das Statement binden
             $stmt->bind_param($types, ...array_values($values));
             
