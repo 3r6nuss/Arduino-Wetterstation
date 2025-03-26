@@ -13,6 +13,8 @@ services:
       - finn_network
     volumes:
       - db_data:/var/lib/mysql             # Volume for MySQL data
+    ports:
+      - "3306:3306"  # Change this if the web server uses a different port
 
   web:
     image: ghcr.io/3r6nuss/dht:latest
