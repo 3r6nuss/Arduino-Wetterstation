@@ -1,8 +1,8 @@
 <?php
 // Datenbank-Verbindungsdaten
-$servername = "localhost";  // Dein Server, in der Regel 'localhost'
+$servername = "db";  // Dein Server, in der Regel 'localhost'
 $username = "root";         // Dein MySQL-Benutzername (bei XAMPP normalerweise 'root')
-$password = "";             // Dein MySQL-Passwort (bei XAMPP normalerweise leer)
+$password = "password";             // Dein MySQL-Passwort (bei XAMPP normalerweise leer)
 $dbname = "esp8266_db"; // Der Name der Datenbank, die du verwendest
 
 // Erstelle eine Verbindung zur Datenbank
