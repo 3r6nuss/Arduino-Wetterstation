@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include "DHT.h"
 
 // WLAN-Einstellungen
 const char* ssid = "WLAN-782577";       // Hier deinen WLAN-Namen eintragen
@@ -7,6 +8,17 @@ const char* password = "60025416322051135176"; // Hier dein WLAN-Passwort eintra
 
 // Sensor-Pin
 const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
+
+// DHT11-Einstellungen
+#define DHT_TYPE DHT11 // DHT-Sensor DHT11
+#define DHT_PIN 14 // GPIO14 als Datenpin des DHT-Sensors
+#define DHT_POWER 16 // GPIO16 als Spannungsversorgung für den DHT-Sensor
+
+DHT dht(DHT_PIN, DHT_TYPE); // DHT-Sensor erstellen
+
+const long interval = 2000; // 2000ms = 2sec. Intervall der Datenerfassung
+
+#define OUTPUT_PIN 16 // GPIO16 als Output-Pin
 
 // Eigene Hash-Funktion zur Generierung eines 6-stelligen Codes aus der MAC-Adresse
 uint32_t customHash(String macAddress) {
@@ -50,6 +62,18 @@ void setup() {
     Serial.println(macAddress);
     Serial.print("Geraete-Code: ");
     Serial.println(deviceCode);
+
+    pinMode(DHT_POWER, OUTPUT); // Spannungsversorgung für DHT-Baustein
+    digitalWrite(DHT_POWER, HIGH); // GPIO16 dauerhaft auf HIGH setzen
+
+    dht.begin(); // Initialisierung des DHT-Sensors
+
+    Serial.begin(115200);
+    delay(500);
+    Serial.println("\nDHT running...\n");
+
+    pinMode(OUTPUT_PIN, OUTPUT); // GPIO16 als Ausgang setzen
+    digitalWrite(OUTPUT_PIN, HIGH); // GPIO16 dauerhaft auf HIGH setzen
 }
 
 void loop() {
@@ -60,7 +84,20 @@ void loop() {
         // Lichtwert ausgeben
         Serial.print("Helligkeit: "); 
         Serial.println(lightLevel);
-        
+
+        float h = dht.readHumidity(); // Lese Luftfeuchtigkeit
+        float t = dht.readTemperature(); // Lese Temperatur in °C
+        float f = dht.readTemperature(true); // Lese Temperatur in °F (Fahrenheit = true)
+
+        if (isnan(h) || isnan(t) || isnan(f)) {
+            Serial.println("Fehler beim Lesen des DHT-Sensors");
+        } else {
+            Serial.println("Luftfeuchtigkeit: " + String(h) + " %");
+            Serial.println("Temperatur: " + String(t) + " °C");
+            Serial.println("Temperatur: " + String(f) + " °F");
+            Serial.println();
+        }
+
         // HTTP-Client und WiFiClient erstellen
         WiFiClient client;
         HTTPClient http;
@@ -71,10 +108,10 @@ void loop() {
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
         
-        // POST-Anfrage mit Lichtwert und Geräte-Code vorbereiten
+        // POST-Anfrage mit Lichtwert, Temperatur und Luftfeuchtigkeit vorbereiten
         String macAddress = WiFi.macAddress();
         String deviceCode = generateDeviceCode(macAddress);
-        String postData = "light_level=" + String(lightLevel) + "&device_code=" + deviceCode;
+        String postData = "light_level=" + String(lightLevel) + "&temperature=" + String(t) + "&humidity=" + String(h) + "&device_code=" + deviceCode;
         
         // Send POST request
         int httpResponseCode = http.POST(postData);
@@ -93,5 +130,5 @@ void loop() {
         Serial.println("WLAN-Verbindung verloren");
     }
     
-    delay(10000); // 10 Sekunden warten bis zur nächsten Messung
+    delay(interval); // Wartezeit zwischen den Messungen
 }
