@@ -66,7 +66,7 @@ void loop() {
         HTTPClient http;
         
         // Verbindung zum Server herstellen
-        http.begin(client, "http://192.168.2.194/Repos/esp_server/sensor_data.php");
+        http.begin(client, "http://192.168.2.194/Repos/Arduino-Wetterstation/esp_server/sensor_data.php");
         
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -76,7 +76,17 @@ void loop() {
         String deviceCode = generateDeviceCode(macAddress);
         String postData = "light_level=" + String(lightLevel) + "&device_code=" + deviceCode;
         
-       
+        // Send POST request
+        int httpResponseCode = http.POST(postData);
+        if (httpResponseCode > 0) {
+            Serial.print("HTTP Response Code: ");
+            Serial.println(httpResponseCode);
+            String response = http.getString();
+            Serial.println("Antwort vom Server: " + response);
+        } else {
+            Serial.print("Fehler bei der HTTP-Anfrage: ");
+            Serial.println(httpResponseCode);
+        }
         
         http.end(); // Verbindung schließen
     } else {
