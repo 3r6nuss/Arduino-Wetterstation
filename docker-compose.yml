@@ -1,12 +1,32 @@
 version: '3.8'
 
 services:
-  web:
-    image: nginx:latest
-    container_name: my-nginx
-    ports:
-      - "82:80"
-      - "443:443"
+  db:
+    image: mysql:latest
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: password  # Change this to a secure password
+      MYSQL_DATABASE: esp8266_db          # Change this to your desired database name
+      MYSQL_USER: Wetter                     # Change this to your desired username
+      MYSQL_PASSWORD: Wetter123        # Change this to your desired user password
+    networks:
+      - finn_network
     volumes:
-      - /docker/ :/usr/share/nginx/html
-    restart: always
+      - db_data:/var/lib/mysql             # Volume for MySQL data
+
+  web:
+    image: ghcr.io/3r6nuss/dht:latest
+    container_name: webdash
+    environment:
+      TZ: "Europe/Berlin"  # Change this to your timezone
+    ports:
+      - "7456:80"  # Change this if the web server uses a different port
+    networks:
+      - finn_network
+
+networks:
+  finn_network:
+    driver: bridge
+
+volumes:
+  db_data:  # Named volume for MySQL data
