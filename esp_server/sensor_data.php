@@ -6,9 +6,6 @@ include 'config.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Log received POST data for debugging
-file_put_contents('debug.log', print_r($_POST, true), FILE_APPEND);
-
 // Prüfen, ob die Anfrage eine POST-Anfrage ist
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Arrays für Parameter und deren Werte

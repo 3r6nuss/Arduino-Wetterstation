@@ -4,9 +4,6 @@ include 'esp_server/config.php';
 // Überprüfen, ob ein 'device_code' übergeben wurde
 $device_code = isset($_GET['device_code']) ? $_GET['device_code'] : null;
 
-// Debugging: Überprüfen, ob der device_code korrekt empfangen wurde
-file_put_contents('debug.log', "Empfangener device_code: " . $device_code . "\n", FILE_APPEND);
-
 // SQL-Abfrage anpassen, um nur Daten für den angegebenen 'device_code' abzurufen
 if ($device_code) {
     $sql = "SELECT * FROM sensor_data WHERE device_code = ? ORDER BY timestamp DESC";
@@ -22,15 +19,10 @@ if ($device_code) {
             $data[] = $row;
         }
 
-        // Debugging: Überprüfen, ob Daten zurückgegeben wurden
-        file_put_contents('debug.log', "Abfrageergebnisse: " . print_r($data, true) . "\n", FILE_APPEND);
-
         if (empty($data)) {
             $data = ["message" => "Keine Daten für den angegebenen device_code gefunden."];
         }
     } else {
-        // Debugging: Fehler beim Vorbereiten der Abfrage
-        file_put_contents('debug.log', "Fehler beim Vorbereiten der Abfrage: " . $conn->error . "\n", FILE_APPEND);
         $data = ["message" => "Fehler beim Abrufen der Daten."];
     }
 } else {
