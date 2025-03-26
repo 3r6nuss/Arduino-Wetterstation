@@ -16,7 +16,7 @@ const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 
 DHT dht(DHT_PIN, DHT_TYPE); // DHT-Sensor erstellen
 
-const long interval = 2000; // 2000ms = 2sec. Intervall der Datenerfassung
+const long interval = 30000; // 30000ms = 30sec. Intervall der Datenerfassung
 
 #define OUTPUT_PIN 16 // GPIO16 als Output-Pin
 
@@ -36,7 +36,6 @@ String generateDeviceCode(String macAddress) {
 
 void setup() {
     Serial.begin(115200);
-    
     // Mit WLAN verbinden (Stationsmodus)
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
