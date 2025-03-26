@@ -12,7 +12,7 @@ file_put_contents('debug.log', print_r($_POST, true), FILE_APPEND);
 // Prüfen, ob die Anfrage eine POST-Anfrage ist
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Arrays für Parameter und deren Werte
-    $params = array('light_level', 'temperature', 'humidity', 'pressure', 'wind_speed', 'rain', 'esp_id'); // Removed 'device_code'
+    $params = array('light_level', 'temperature', 'humidity', 'pressure', 'wind_speed', 'rain', 'esp_id', 'device_code'); // Added 'device_code'
     $values = array();
     $valid_data = false;
     
@@ -36,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($stmt) {
             // Typen für Parameter festlegen
-            $types = str_repeat("d", count($values) - 1) . "s"; // Adjusted for 'esp_id' being a string
+            $types = str_repeat("d", count($values) - 2) . "ss"; // Adjusted for 'esp_id' and 'device_code' being strings
 
             // Parameter an das Statement binden
             $stmt->bind_param($types, ...array_values($values));
