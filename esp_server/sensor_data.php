@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if ($stmt) {
             // Typen für Parameter festlegen
-            $types = str_repeat("d", count($values) - 2) . "ss"; // Adjusted for 'esp_id' and 'device_code' being strings
+            $types = str_repeat("d", count($values) - 1) . "s"; // Adjusted for 'device_code' being a string
 
             // Parameter an das Statement binden
             $stmt->bind_param($types, ...array_values($values));
