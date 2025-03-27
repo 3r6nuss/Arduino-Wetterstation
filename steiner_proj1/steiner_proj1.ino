@@ -1,43 +1,30 @@
-// Pictures by Kenney.nl
-// Link: https://kenney.nl/assets/platformer-characters-1
-
-// Code by Marcel K.
-
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SPI.h>
 #include <Wire.h>
 #include "DHT.h"
 
-//OLED-Pins
-#define OLED_SCL  GPIO5 //
-#define OLED_SDA  GPIO4
+#define OLED_SCL GPIO5
+#define OLED_SDA GPIO4
 #define OLED_RESET -1
 
-// Sensor-Pin
-const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
+const int lightSensorPin = A0;
+#define DHT_TYPE DHT11
+#define DHT_PIN 14
+#define DHT_POWER 16
 
-// DHT11-Einstellungen
-#define DHT_TYPE DHT11 // DHT-Sensor DHT11
-#define DHT_PIN 14 // GPIO14 als Datenpin des DHT-Sensors
-#define DHT_POWER 16 // GPIO16 als Spannungsversorgung für den DHT-Sensor
+DHT dht(DHT_PIN, DHT_TYPE);
+Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);
 
-DHT dht(DHT_PIN, DHT_TYPE); // DHT-Sensor erstellen
+#define HUMIDITY_THRESHOLD 80
+#define TEMPERATURE_THRESHOLD 4
+#define LIGHT_THRESHOLD 500
 
-//OLED-Display
-Adafruit_SSD1306 display(128 ,64 , &Wire , OLED_RESET);
-
-// Threshold values
-#define HUMIDITY_THRESHOLD 80    // Show water droplet when humidity > 80%
-#define TEMPERATURE_THRESHOLD 4  // Show snowflake when temperature < 4°C
-#define LIGHT_THRESHOLD 500      // Show moon when light < 500, otherwise sun
-
-// Sensor variables
 float humidity = 0;
 float temperature = 0;
 int lightLevel = 0;
 
-const unsigned char epd_bitmap_Mond [] PROGMEM = {
+const unsigned char epd_bitmap_Mond[] PROGMEM = {
 0x00, 0xc0, 0x00, 0x00, 0x03, 0xc0, 0x00, 0x00, 0x07, 0x80, 0x00, 0x00, 0x0f, 0x80, 0x00, 0x00, 
 	0x1f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x00, 
 	0x7f, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 
@@ -46,8 +33,7 @@ const unsigned char epd_bitmap_Mond [] PROGMEM = {
 	0x1f, 0xff, 0xfc, 0x00, 0x0f, 0xff, 0xf8, 0x00, 0x07, 0xff, 0xf0, 0x00, 0x01, 0xff, 0xe0, 0x00, 
 	0x00, 0x7f, 0x00, 0x00
 };
-
-const unsigned char epd_bitmap_Sonne [] PROGMEM = {
+const unsigned char epd_bitmap_Sonne[] PROGMEM = {
     0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x18, 0x00, 0x08, 0x00, 
     0x0c, 0x00, 0x18, 0x00, 0x0c, 0x3e, 0x18, 0x00, 0x00, 0xff, 0x80, 0x00, 0x01, 0xff, 0xc0, 0x00, 
     0x03, 0xff, 0xe0, 0x00, 0x03, 0xff, 0xe0, 0x00, 0x07, 0xff, 0xf0, 0x00, 0x07, 0xff, 0xf0, 0x00, 
@@ -56,8 +42,7 @@ const unsigned char epd_bitmap_Sonne [] PROGMEM = {
     0x0c, 0x00, 0x1c, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 
     0x00, 0x08, 0x00, 0x00
 };
-
-const unsigned char epd_bitmap_Wassertroppe [] PROGMEM = {
+const unsigned char epd_bitmap_Wassertroppe[] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x82, 0x80, 0x00, 
     0x01, 0x42, 0x80, 0x00, 0x01, 0x44, 0x40, 0x00, 0x01, 0x44, 0x40, 0x00, 0x01, 0xc4, 0x40, 0x00, 
@@ -66,8 +51,7 @@ const unsigned char epd_bitmap_Wassertroppe [] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
     0x00, 0x00, 0x00, 0x00
 };
-
-const unsigned char epd_bitmap_Schneeflogge [] PROGMEM = {
+const unsigned char epd_bitmap_Schneeflogge[] PROGMEM = {
     0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0xff, 0x80, 0x00, 
     0x02, 0x7f, 0x20, 0x00, 0x06, 0x1c, 0x30, 0x00, 0x36, 0x08, 0x36, 0x00, 0x3e, 0x08, 0x3e, 0x00, 
     0x0e, 0x08, 0x38, 0x00, 0x1f, 0x88, 0xfc, 0x00, 0x39, 0xeb, 0xce, 0x00, 0x20, 0x7f, 0x02, 0x00, 
@@ -78,100 +62,82 @@ const unsigned char epd_bitmap_Schneeflogge [] PROGMEM = {
 };
 
 void setup() {
-  Serial.begin(115200);
-  
-  // Initialize display
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3c);
-  display.display();
-  display.clearDisplay(); 
-  
-  // Initialize DHT sensor
-  pinMode(DHT_POWER, OUTPUT);
-  digitalWrite(DHT_POWER, HIGH);
-  dht.begin();
-  
-  Serial.println("DHT and OLED Display running...");
-  delay(1000);
+    Serial.begin(115200);
+
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3c);
+    display.display();
+    display.clearDisplay();
+
+    pinMode(DHT_POWER, OUTPUT);
+    digitalWrite(DHT_POWER, HIGH);
+    dht.begin();
+
+    Serial.println("DHT and OLED Display running...");
+    delay(1000);
 }
 
 void loop() {
-  // Read sensor values
-  readSensorValues();
-  
-  // Update display
-  updateDisplay();
-  
-  // Wait before next update
-  delay(2000);
+    readSensorValues();
+    updateDisplay();
+    delay(2000);
 }
 
 void readSensorValues() {
-  // Read light sensor
-  lightLevel = analogRead(lightSensorPin);
-  Serial.print("Helligkeit: "); 
-  Serial.println(lightLevel);
-  
-  // Read temperature and humidity
-  humidity = dht.readHumidity();
-  temperature = dht.readTemperature();
-  
-  if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("Fehler beim Lesen des DHT-Sensors");
-  } else {
-    Serial.print("Luftfeuchtigkeit: ");
-    Serial.print(humidity);
-    Serial.println(" %");
-    Serial.print("Temperatur: ");
-    Serial.print(temperature);
-    Serial.println(" °C");
-  }
+    lightLevel = analogRead(lightSensorPin);
+    Serial.print("Helligkeit: ");
+    Serial.println(lightLevel);
+
+    humidity = dht.readHumidity();
+    temperature = dht.readTemperature();
+
+    if (isnan(humidity) || isnan(temperature)) {
+        Serial.println("Fehler beim Lesen des DHT-Sensors");
+    } else {
+        Serial.print("Luftfeuchtigkeit: ");
+        Serial.print(humidity);
+        Serial.println(" %");
+        Serial.print("Temperatur: ");
+        Serial.print(temperature);
+        Serial.println(" °C");
+    }
 }
 
 void updateDisplay() {
-  display.clearDisplay();
-  
-  // Draw icons based on conditions
-  
-  // Light icon (Sun or Moon)
-  if (lightLevel < LIGHT_THRESHOLD) {
-    display.drawBitmap(0, 0, epd_bitmap_Mond, 25, 25, WHITE);  // Moon
-  } else {
-    display.drawBitmap(0, 0, epd_bitmap_Sonne, 25, 25, WHITE); // Sun
-  }
-  
-  // Temperature (Snowflake if cold)
-  if (temperature < TEMPERATURE_THRESHOLD) {
-    display.drawBitmap(90, 0, epd_bitmap_Schneeflogge, 25, 25, WHITE);
-  }
-  
-  // Humidity (Water droplet if humid)
-  if (humidity > HUMIDITY_THRESHOLD) {
-    display.drawBitmap(45, 0, epd_bitmap_Wassertroppe, 25, 25, WHITE);
-  }
-  
-  // Display values below icons
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  
-  // Light level
-  display.setCursor(0, 30);
-  display.print("Licht:");
-  display.setCursor(0, 40);
-  display.print(lightLevel);
-  
-  // Humidity
-  display.setCursor(45, 30);
-  display.print("Feucht:");
-  display.setCursor(45, 40);
-  display.print(humidity);
-  display.print("%");
-  
-  // Temperature
-  display.setCursor(90, 30);
-  display.print("Temp:");
-  display.setCursor(90, 40);
-  display.print(temperature);
-  display.print("C");
-  
-  display.display();
+    display.clearDisplay();
+
+    if (lightLevel < LIGHT_THRESHOLD) {
+        display.drawBitmap(0, 0, epd_bitmap_Mond, 25, 25, WHITE);
+    } else {
+        display.drawBitmap(0, 0, epd_bitmap_Sonne, 25, 25, WHITE);
+    }
+
+    if (temperature < TEMPERATURE_THRESHOLD) {
+        display.drawBitmap(90, 0, epd_bitmap_Schneeflogge, 25, 25, WHITE);
+    }
+
+    if (humidity > HUMIDITY_THRESHOLD) {
+        display.drawBitmap(45, 0, epd_bitmap_Wassertroppe, 25, 25, WHITE);
+    }
+
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+
+    display.setCursor(0, 30);
+    display.print("Licht:");
+    display.setCursor(0, 40);
+    display.print(lightLevel);
+
+    display.setCursor(45, 30);
+    display.print("Feucht:");
+    display.setCursor(45, 40);
+    display.print(humidity);
+    display.print("%");
+
+    display.setCursor(90, 30);
+    display.print("Temp:");
+    display.setCursor(90, 40);
+    display.print(temperature);
+    display.print("C");
+
+    display.display();
 }
