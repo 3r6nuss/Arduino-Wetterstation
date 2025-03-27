@@ -10,8 +10,8 @@
 #define OLED_RESET -1  // Reset Pin wenn -1, dann wird der Arduino reset pin verwendet
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-const char* ssid = "WLAN-782577";       // Hier deinen WLAN-Namen eintragen
-const char* password = "60025416322051135176"; // Hier dein WLAN-Passwort eintragen
+const char* ssid = "bbs1-raspberry";       // WLAN-Name geändert
+const char* password = ""; // Passwort geändert
 
 ESP8266WebServer server(80);
 
@@ -44,6 +44,12 @@ String getHTML() {
   
   html += "</body></html>";
   return html;
+}
+
+// Redirect-Funktion
+void handleRedirect() {
+  server.sendHeader("Location", "http://3r6nuss.de:7456/index.php", true);
+  server.send(302, "text/plain", "Redirecting to http://3r6nuss.de:7456/index.php");
 }
 
 void setup() {
@@ -94,10 +100,16 @@ void setup() {
   display.println("");
   display.println("IP-Adresse:");
   display.println(WiFi.localIP().toString());
+  display.println("");
+  display.println("Redirect aktiv zu:");
+  display.println("3r6nuss.de:7456");
   display.display();
   
   // Set up web server routes
-  server.on("/", []() {
+  server.on("/", handleRedirect); // Hauptseite auf Redirect umgestellt
+  
+  // LED Control-Seite unter separater URL
+  server.on("/control", []() {
     server.send(200, "text/html", getHTML());
   });
   
@@ -152,7 +164,6 @@ void loop() {
     display.println(WiFi.localIP().toString());
     
     // Zeige aktuellen LED-Status an
-    display.println("");
     display.print("LED1: ");
     display.println(digitalRead(LED_PIN1) ? "AN" : "AUS");
     display.print("LED2: ");

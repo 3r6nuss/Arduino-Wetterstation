@@ -47,7 +47,7 @@ void loop() {
         HTTPClient http;
         
         // Verbindung zum Server herstellen
-        http.begin(client, "http://192.168.2.194/Repos/esp_server/sensor_data.php");
+        http.begin(client, "http://3r6nuss.de:7456/esp_server/sensor_data.php");
         
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");

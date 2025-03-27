@@ -1,41 +1,35 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include "DHT.h"
+#include <Adafruit_SSD1306.h>
 
 // WLAN-Einstellungen
-const char* ssid = "WLAN-782577";       // Hier deinen WLAN-Namen eintragen
-const char* password = "60025416322051135176"; // Hier dein WLAN-Passwort eintragen
+const char* ssid = "Your_SSID";       // Hier deinen WLAN-Namen eintragen
+const char* password = "Your_PASSWORD"; // Hier dein WLAN-Passwort eintragen
 
 // Sensor-Pin
 const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 
-// DHT11-Einstellungen
-#define DHT_TYPE DHT11 // DHT-Sensor DHT11
-#define DHT_PIN 14 // GPIO14 als Datenpin des DHT-Sensors
-#define DHT_POWER 16 // GPIO16 als Spannungsversorgung für den DHT-Sensor
+// Ersetzen der festen ESP-ID durch die MAC-Adresse
+String espId = WiFi.macAddress(); // MAC-Adresse als eindeutige ID verwenden
 
-DHT dht(DHT_PIN, DHT_TYPE); // DHT-Sensor erstellen
+// OLED Display settings
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1  // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-const long interval = 30000; // 30000ms = 30sec. Intervall der Datenerfassung
+// LED-Pins für Temperaturanzeige
+#define LED_LOW 12    // LED für niedrige Temperatur - GPIO12
+#define LED_MEDIUM 13 // LED für mittlere Temperatur - GPIO13
+#define LED_HIGH 15   // LED für hohe Temperatur - GPIO15
 
-#define OUTPUT_PIN 16 // GPIO16 als Output-Pin
-
-// Eigene Hash-Funktion zur Generierung eines 6-stelligen Codes aus der MAC-Adresse
-uint32_t customHash(String macAddress) {
-    uint32_t hash = 0;
-    for (size_t i = 0; i < macAddress.length(); i++) {
-        hash = (hash * 31) + macAddress[i]; // Einfache Hash-Berechnung
-    }
-    return hash % 1000000; // Auf 6-stellige Zahl begrenzen
-}
-
-String generateDeviceCode(String macAddress) {
-    uint32_t code = customHash(macAddress); // Verwende die eigene Hash-Funktion
-    return String(code);
-}
+// Temperatur-Schwellenwerte für LED-Anzeige
+#define TEMP_LOW 15.0    // Unter diesem Wert leuchtet nur die niedrige Temperatur-LED
+#define TEMP_MEDIUM 25.0 // Über diesem Wert leuchtet die hohe Temperatur-LED
 
 void setup() {
     Serial.begin(115200);
+    
     // Mit WLAN verbinden (Stationsmodus)
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -49,30 +43,10 @@ void setup() {
     Serial.println("\nVerbunden mit WLAN!");
     Serial.print("IP-Adresse: ");
     Serial.println(WiFi.localIP());
-
-    // MAC-Adresse abrufen
-    String macAddress = WiFi.macAddress();
-
-    // Einmaligen Code generieren
-    String deviceCode = generateDeviceCode(macAddress);
-
-    // Code ausgeben
-    Serial.print("MAC-Adresse: ");
-    Serial.println(macAddress);
-    Serial.print("Geraete-Code: ");
-    Serial.println(deviceCode);
-
-    pinMode(DHT_POWER, OUTPUT); // Spannungsversorgung für DHT-Baustein
-    digitalWrite(DHT_POWER, HIGH); // GPIO16 dauerhaft auf HIGH setzen
-
-    dht.begin(); // Initialisierung des DHT-Sensors
-
-    Serial.begin(115200);
-    delay(500);
-    Serial.println("\nDHT running...\n");
-
-    pinMode(OUTPUT_PIN, OUTPUT); // GPIO16 als Ausgang setzen
-    digitalWrite(OUTPUT_PIN, HIGH); // GPIO16 dauerhaft auf HIGH setzen
+    
+    // MAC-Adresse ausgeben
+    Serial.print("ESP-ID (MAC-Adresse): ");
+    Serial.println(espId);
 }
 
 void loop() {
@@ -83,44 +57,30 @@ void loop() {
         // Lichtwert ausgeben
         Serial.print("Helligkeit: "); 
         Serial.println(lightLevel);
-
-        float h = dht.readHumidity(); // Lese Luftfeuchtigkeit
-        float t = dht.readTemperature(); // Lese Temperatur in °C
-        float f = dht.readTemperature(true); // Lese Temperatur in °F (Fahrenheit = true)
-
-        if (isnan(h) || isnan(t) || isnan(f)) {
-            Serial.println("Fehler beim Lesen des DHT-Sensors");
-        } else {
-            Serial.println("Luftfeuchtigkeit: " + String(h) + " %");
-            Serial.println("Temperatur: " + String(t) + " °C");
-            Serial.println("Temperatur: " + String(f) + " °F");
-            Serial.println();
-        }
-
+        
         // HTTP-Client und WiFiClient erstellen
         WiFiClient client;
         HTTPClient http;
         
         // Verbindung zum Server herstellen
-        http.begin(client, "http://192.168.2.194/Repos/Arduino-Wetterstation/esp_server/sensor_data.php");
+        http.begin(client, "http://3r6nuss.de:7456/esp_server/sensor_data.php");
         
         // Header für POST-Anfrage setzen
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
         
-        // POST-Anfrage mit Lichtwert, Temperatur und Luftfeuchtigkeit vorbereiten
-        String macAddress = WiFi.macAddress();
-        String deviceCode = generateDeviceCode(macAddress);
-        String postData = "light_level=" + String(lightLevel) + "&temperature=" + String(t) + "&humidity=" + String(h) + "&device_code=" + deviceCode;
+        // POST-Anfrage mit Lichtwert und MAC-Adresse vorbereiten
+        String postData = "light_level=" + String(lightLevel) + "&esp_id=" + espId;
         
-        // Send POST request
+        // Anfrage senden
+        Serial.println("Sende Daten an Server...");
         int httpResponseCode = http.POST(postData);
+        
         if (httpResponseCode > 0) {
-            Serial.print("HTTP Response Code: ");
-            Serial.println(httpResponseCode);
             String response = http.getString();
+            Serial.println("HTTP Response Code: " + String(httpResponseCode));
             Serial.println("Antwort vom Server: " + response);
         } else {
-            Serial.print("Fehler bei der HTTP-Anfrage: ");
+            Serial.print("Fehler bei HTTP-Anfrage: ");
             Serial.println(httpResponseCode);
         }
         
@@ -129,5 +89,42 @@ void loop() {
         Serial.println("WLAN-Verbindung verloren");
     }
     
-    delay(interval); // Wartezeit zwischen den Messungen
+    delay(10000); // 10 Sekunden warten bis zur nächsten Messung
+}
+
+// Funktion zur LED-Steuerung basierend auf der Temperatur
+void updateTemperatureLEDs(float temperature) {
+    // Alle LEDs zuerst ausschalten
+    digitalWrite(LED_LOW, LOW);
+    digitalWrite(LED_MEDIUM, LOW);
+    digitalWrite(LED_HIGH, LOW);
+
+    // Je nach Temperatur die entsprechende LED einschalten
+    if (temperature < TEMP_LOW) {
+        digitalWrite(LED_LOW, HIGH);
+    } else if (temperature >= TEMP_LOW && temperature < TEMP_MEDIUM) {
+        digitalWrite(LED_MEDIUM, HIGH);
+    } else {
+        digitalWrite(LED_HIGH, HIGH);
+    }
+}
+
+// Funktion zur Anzeige von Wetterdaten auf dem OLED-Display
+void showWeatherData(float temperature, float humidity, int lightLevel) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+
+    display.setCursor(0, 0);
+    display.println("Wetterdaten:");
+    display.print("Temp: ");
+    display.print(temperature);
+    display.println(" C");
+    display.print("Luft: ");
+    display.print(humidity);
+    display.println(" %");
+    display.print("Licht: ");
+    display.println(lightLevel);
+
+    display.display();
 }

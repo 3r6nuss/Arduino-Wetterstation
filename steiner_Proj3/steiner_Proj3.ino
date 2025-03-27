@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
@@ -15,6 +16,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 const char* ssid = "WLAN-782577";       // Hier deinen WLAN-Namen eintragen
 const char* password = "60025416322051135176"; // Hier dein WLAN-Passwort eintragen
 
+// Webserver für Redirect
+ESP8266WebServer server(80);
+
 // Sensor-Pin
 const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 
@@ -22,6 +26,15 @@ const int lightSensorPin = A0;    // Lichtsensor am analogen Pin A0
 #define DHT_TYPE DHT11 // DHT-Sensor DHT11
 #define DHT_PIN 14 // GPIO14 als Datenpin des DHT-Sensors
 #define DHT_POWER 16 // GPIO16 als Spannungsversorgung für den DHT-Sensor
+
+// LED-Pins für Temperaturanzeige
+#define LED_LOW 12    // LED für niedrige Temperatur - GPIO12
+#define LED_MEDIUM 13 // LED für mittlere Temperatur - GPIO13
+#define LED_HIGH 15   // LED für hohe Temperatur - GPIO15
+
+// Temperatur-Schwellenwerte für LED-Anzeige
+#define TEMP_LOW 15.0    // Unter diesem Wert leuchtet nur die niedrige Temperatur-LED
+#define TEMP_MEDIUM 25.0 // Über diesem Wert leuchtet die hohe Temperatur-LED
 
 DHT dht(DHT_PIN, DHT_TYPE); // DHT-Sensor erstellen
 
@@ -62,8 +75,8 @@ const unsigned char epd_bitmap_bild [] PROGMEM = {
 	0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xff, 0xff, 0xe0, 0x7f, 0x00, 0x18, 0x00, 0xc0, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xf7, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0xf7, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x1f, 0xf3, 0xff, 0x80, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x3f, 0xb7, 0xbf, 0x81, 0xff, 0x80, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x1f, 0xf3, 0xff, 0x80, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x3f, 0xb7, 0xbf, 0x81, 0xff, 0x80, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x3f, 0x77, 0x3f, 0x81, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x1f, 0x26, 0x3f, 0xc7, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x3f, 0x26, 0x3f, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x3f, 
@@ -84,6 +97,7 @@ const unsigned char epd_bitmap_bild [] PROGMEM = {
 	0x00, 0x00, 0x3f, 0xff, 0xc0, 0x00, 0x03, 0x43, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x7c, 0x00, 0x00, 0x02, 0x42, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -153,10 +167,25 @@ void setup() {
     Serial.print("Geraete-Code: ");
     Serial.println(deviceCode);
 
+    // LED-Pins initialisieren
+    pinMode(LED_LOW, OUTPUT);
+    pinMode(LED_MEDIUM, OUTPUT);
+    pinMode(LED_HIGH, OUTPUT);
+    
+    // Alle LEDs zunächst ausschalten
+    digitalWrite(LED_LOW, LOW);
+    digitalWrite(LED_MEDIUM, LOW);
+    digitalWrite(LED_HIGH, LOW);
+
     pinMode(DHT_POWER, OUTPUT); // Spannungsversorgung für DHT-Baustein
     digitalWrite(DHT_POWER, HIGH); // GPIO16 dauerhaft auf HIGH setzen
 
     dht.begin(); // Initialisierung des DHT-Sensors
+
+    // Webserver starten und Route für Redirect einrichten
+    server.on("/", handleRedirect);
+    server.begin();
+    Serial.println("Webserver gestartet - Redirect zu http://3r6nuss.de:7456/index.php aktiv");
 
     // Erstes Display-State setzen und Timer starten
     stateStartTime = millis();
@@ -195,6 +224,9 @@ void loop() {
             showWeatherData();
         }
     }
+    
+    // Webserver-Client bearbeiten (wichtig für Redirect-Funktionalität)
+    server.handleClient();
     
     delay(100);
 }
@@ -296,6 +328,9 @@ void updateAndSendData() {
     Serial.println("Temperatur: " + String(t) + " °C");
     Serial.println();
     
+    // Aktualisiere die LED-Anzeige basierend auf der Temperatur
+    updateTemperatureLEDs(t);
+    
     // HTTP-Client und WiFiClient erstellen
     WiFiClient client;
     HTTPClient http;
@@ -305,10 +340,12 @@ void updateAndSendData() {
     String postData = "light_level=" + String(lightLevel) + 
                      "&temperature=" + String(t) + 
                      "&humidity=" + String(h) + 
-                     "&device_code=" + deviceCode;
+                     "&device_code=" + deviceCode +
+                     "&esp_id=" + WiFi.macAddress();  // Direkte MAC-Adresse als esp_id
     
     // Verbindung zum Server herstellen und Daten senden
-    http.begin(client, "http://192.168.2.194/Repos/Arduino-Wetterstation/esp_server/sensor_data.php");
+    Serial.println("Sende Daten an Server...");
+    http.begin(client, "http://3r6nuss.de:7456/esp_server/sensor_data.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     int httpResponseCode = http.POST(postData);
     
@@ -323,4 +360,33 @@ void updateAndSendData() {
     }
     
     http.end(); // Verbindung schließen
+}
+
+// Aktualisiert die LED-Anzeige basierend auf der Temperatur
+void updateTemperatureLEDs(float temperature) {
+    // Alle LEDs zuerst ausschalten
+    digitalWrite(LED_LOW, LOW);
+    digitalWrite(LED_MEDIUM, LOW);
+    digitalWrite(LED_HIGH, LOW);
+    
+    // Je nach Temperatur die entsprechende LED einschalten
+    if (temperature < TEMP_LOW) {
+        // Unter 15°C - nur LOW-LED leuchtet
+        digitalWrite(LED_LOW, HIGH);
+        Serial.println("LED: Niedrige Temperatur");
+    } else if (temperature >= TEMP_LOW && temperature < TEMP_MEDIUM) {
+        // Zwischen 15°C und 25°C - nur MEDIUM-LED leuchtet
+        digitalWrite(LED_MEDIUM, HIGH);
+        Serial.println("LED: Mittlere Temperatur");
+    } else {
+        // Über 25°C - nur HIGH-LED leuchtet
+        digitalWrite(LED_HIGH, HIGH);
+        Serial.println("LED: Hohe Temperatur");
+    }
+}
+
+// Redirect-Funktion, um Benutzer zur Hauptwebseite umzuleiten
+void handleRedirect() {
+  server.sendHeader("Location", "http://3r6nuss.de:7456/index.php", true);
+  server.send(302, "text/plain", "Redirecting to http://3r6nuss.de:7456/index.php");
 }
